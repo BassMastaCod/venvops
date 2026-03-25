@@ -1,0 +1,33 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "venvops"
+dynamic = ["version"]
+authors = [{name="Cody M Sommer", email="bassmastacod@gmail.com"}]
+description = "A library for creating and managing virtual environments, including installing and managing packages"
+keywords = ["venv", "virtual", "environment", "package", "pip", "api", "python", "management", "automation", "install", "uninstall", "requirements"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+license = {text = "MIT"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed"
+]
+
+[project.urls]
+Repository = "https://github.com/BassMastaCod/venvops.git"
+Issues = "https://github.com/BassMastaCod/venvops/issues"
+
+[tool.pdm.version]
+source = "scm"
