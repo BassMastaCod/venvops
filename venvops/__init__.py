@@ -6,6 +6,26 @@ from pathlib import Path
 from typing import Optional
 
 
+class CommandError(Exception):
+    """Base class for command execution errors."""
+
+
+class InvalidPackageError(CommandError):
+    """Raised when attempting to install an invalid package."""
+
+
+class InvalidVersionError(CommandError):
+    """Raised when attempting to install a package with an invalid version."""
+
+
+class MalformedRequirementError(CommandError):
+    """Raised when the requirement string is malformed."""
+
+
+class ConflictingRequirementError(CommandError):
+    """Raised when there are conflicting requirements during dependency resolution."""
+
+
 class Package:
     """Represents a single package specification expressed in a standard requirement-line format.
 
@@ -43,14 +63,11 @@ class Package:
                 pass
         return cls(raw)
 
-    def is_compatible(self, other: 'Package') -> bool:
-        return self == other
-
     def __eq__(self, other):
-        return getattr(other, 'name', str(other)) == getattr(self, 'name', str(self))
+        return getattr(other, 'name', str(other)) == self.name
 
     def __hash__(self):
-        return hash(getattr(self, 'name', str(self)))
+        return hash(self.name)
 
     def __str__(self) -> str:
         return self.raw
@@ -113,14 +130,15 @@ UrlPackage.register_subclasses(VcsPackage)
 Package.register_subclasses(PinnedPackage, EditablePackage, UrlPackage)
 
 
-class Packages(list[Package]):
+class Packages(set[Package]):
     def __contains__(self, item: str|Package) -> bool:
-        if isinstance(item, Package):
-            item = item.name
-        return any(pkg.name == item for pkg in self)
+        return any(pkg == item for pkg in self)
 
-    def get(self, name: str) -> 'Packages':
-        return Packages([pkg for pkg in self if pkg.name == name])
+    def get(self, name: str) -> 'Package':
+        for pkg in self:
+            if pkg.name == name:
+                return pkg
+        raise KeyError(f'Package not found: {name}')
 
 
 class Venv:
@@ -186,17 +204,26 @@ class Venv:
         :param check: False to not raise an exception if the command returns a non-zero exit code
         :param kwargs: The keyword arguments to pass to the subprocess.run function
         :return: The output of the command as a string (includes both stdout and stderr)
-        :raises: CalledProcessError if the command fails (assuming check=True)
+        :raises: CommandError if the command fails (assuming check=True)
         """
-        return cls.run(
-            executable,
-            *args,
-            check=check,
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
-            text=True,
-            **kwargs
-        ).stdout
+        try:
+            return cls.run(
+                executable,
+                *args,
+                check=check,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                text=True,
+                **kwargs
+            ).stdout
+        except subprocess.CalledProcessError as e:
+            raise CommandError(
+                f'Command failed:\n'
+                f'  Executable: {executable}\n'
+                f'  Arguments: {" ".join(args)}\n'
+                f'  Exit code: {e.returncode}\n'
+                f'  Output:\n{e.stdout}'
+            ) from e
 
     def run_python(self, *args) -> str:
         """Runs a python command within the venv."""
@@ -204,7 +231,33 @@ class Venv:
 
     def run_pip(self, *args) -> str:
         """Runs a pip command within the venv."""
-        return self.run_for_output(self.pip, *args)
+        try:
+            return self.run_for_output(self.pip, *args)
+        except CommandError as e:
+            if isinstance(e.__cause__, subprocess.CalledProcessError):
+                output = e.__cause__.stdout
+                if 'No matching distribution found' in output:
+                    if 'from versions: none' in output:
+                        raise InvalidPackageError(
+                            f'Invalid package specified:\n'
+                            f'{output}'
+                        ) from e
+                    else:
+                        raise InvalidVersionError(
+                            f'Invalid version specified:\n'
+                            f'{output}'
+                        ) from e
+                elif 'Invalid requirement' in output:
+                    raise MalformedRequirementError(
+                        f'Malformed requirement string:\n'
+                        f'{output}'
+                    ) from e
+                elif 'ResolutionImpossible' in output:
+                    raise ConflictingRequirementError(
+                        f'Conflicting requirements detected:\n'
+                        f'{output}'
+                    )
+            raise
 
     def install(self, *packages) -> str:
         """Installs the given packages to the venv."""
@@ -214,13 +267,25 @@ class Venv:
         """Uninstalls the given packages from the venv."""
         return self.run_pip('uninstall', '-y', *packages)
 
-    def install_file(self, req_file: str|Path) -> str:
-        """Installs the packages in the specified requirements file to the venv."""
-        return self.install('-r', str(req_file))
+    def install_requirements(self, *req_files: str|Path) -> str:
+        """Installs the packages in the specified requirements files to the venv."""
+        args = []
+        for req in req_files:
+            req = Path(req)
+            if not req.exists():
+                raise FileNotFoundError(f'Requirements file not found: {req}')
+            args.extend(['-r', str(req)])
+        return self.install(*args)
 
-    def uninstall_file(self, req_file: str|Path) -> str:
-        """Uninstalls the packages in the specified requirements file from the venv."""
-        return self.uninstall('-r', str(req_file))
+    def uninstall_requirements(self, *req_files: str|Path) -> str:
+        """Uninstalls the packages in the specified requirements files from the venv."""
+        args = []
+        for req in req_files:
+            req = Path(req)
+            if not req.exists():
+                raise FileNotFoundError(f'Requirements file not found: {req}')
+            args.extend(['-r', str(req)])
+        return self.uninstall(*args)
 
     def installed(self) -> Packages:
         """Returns the current packages installed in the venv."""

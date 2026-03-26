@@ -1,4 +1,6 @@
-from venvops import Package, Packages
+import pytest
+
+from venvops import Package, Packages, PinnedPackage
 
 
 def test_packages():
@@ -40,23 +42,22 @@ def test_contains__str():
 def test_get():
     pkg1 = Package.parse('requests==2.31.0')
     pkg2 = Package.parse('numpy==1.26.4')
-    pkg3 = Package.parse('requests==2.32.0')  # Different version, same name
-    packages = Packages([pkg1, pkg2, pkg3])
+    packages = Packages([pkg1, pkg2])
 
-    requests_packages = packages.get('requests')
-    assert isinstance(requests_packages, Packages)
-    assert len(requests_packages) == 2
-    assert pkg1 in requests_packages
-    assert pkg3 in requests_packages
-    assert pkg2 not in requests_packages
+    requests = packages.get('requests')
+    assert isinstance(requests, PinnedPackage)
+    assert requests.name == 'requests'
+    assert requests.version == '2.31.0'
 
-    numpy_packages = packages.get('numpy')
-    assert len(numpy_packages) == 1
-    assert pkg2 in numpy_packages
+    numpy = packages.get('numpy')
+    assert isinstance(numpy, PinnedPackage)
+    assert numpy.name == 'numpy'
+    assert numpy.version == '1.26.4'
 
-    nonexistent_packages = packages.get('nonexistent')
-    assert len(nonexistent_packages) == 0
-    assert isinstance(nonexistent_packages, Packages)
+
+def test_get__missing():
+    with pytest.raises(KeyError):
+        Packages().get('packagename')
 
 
 def test_packages_empty():
@@ -67,10 +68,6 @@ def test_packages_empty():
 
     pkg = Package.parse('requests==2.31.0')
     assert pkg not in packages
-
-    result = packages.get('anything')
-    assert len(result) == 0
-    assert isinstance(result, Packages)
 
 
 def test_packages_with_different_package_types():

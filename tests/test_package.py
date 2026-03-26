@@ -89,5 +89,3 @@ def test_vcs_package_fields():
     assert pkg.commit == 'abcdef'
     assert pkg.url == 'git+https://github.com/user/repo.git@abcdef'
     assert str(pkg) == 'mypkg @ git+https://github.com/user/repo.git@abcdef'
-
-

@@ -1,8 +1,7 @@
-import subprocess
 from unittest.mock import patch
 import pytest
 
-from venvops import Venv, Package
+from venvops import *
 
 
 @pytest.fixture
@@ -62,7 +61,7 @@ def test_run_for_output():
 
 
 def test_run_for_output__failed():
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(CommandError):
         Venv.run_for_output('python', '-c', 'import sys; sys.exit(1)')
 
 
@@ -88,6 +87,28 @@ def test_install(venv):
     assert 'wheel' in venv.installed()
 
 
+def test_install__specific_version(venv):
+    venv.install('wheel==0.38.4')
+    wheel = venv.installed().get('wheel')
+    assert isinstance(wheel, PinnedPackage)
+    assert wheel.version == '0.38.4'
+
+
+def test_install__invalid_package(venv):
+    with pytest.raises(InvalidPackageError):
+        venv.install('invalid-package')
+
+
+def test_install__invalid_version(venv):
+    with pytest.raises(InvalidVersionError):
+        venv.install('wheel==123.456.789')
+
+
+def test_install__malformed_requirement(venv):
+    with pytest.raises(MalformedRequirementError):
+        venv.install('wheel==')
+
+
 def test_uninstall(venv):
     venv.install('wheel')
     assert 'wheel' in venv.installed()
@@ -100,8 +121,32 @@ def test_install_file(venv, temp_dir):
     req_file = temp_dir / 'requirements.txt'
     req_file.write_text('wheel==0.43.0\n')
 
-    venv.install_file(req_file)
+    venv.install_requirements(req_file)
     assert 'wheel' in venv.installed()
+
+
+def test_install_requirements__multiple_files(temp_dir, venv):
+    req_file1 = temp_dir / 'requirements1.txt'
+    req_file1.write_text('tinydb==4.7.0\nclick==8.1.7')
+    req_file2 = temp_dir / 'requirements2.txt'
+    req_file2.write_text('flake8==6.1.0\nitsdangerous==2.1.2')
+
+    venv.install_requirements(req_file1, req_file2)
+    installed = venv.installed()
+    assert 'tinydb' in installed
+    assert 'click' in installed
+    assert 'flake8' in installed
+    assert 'itsdangerous' in installed
+
+
+def test_install_requirements__conflicting_versions(temp_dir, venv):
+    req_file1 = temp_dir / 'requirements1.txt'
+    req_file1.write_text('pytest==7.4.0')
+    req_file2 = temp_dir / 'requirements2.txt'
+    req_file2.write_text('pytest==6.2.0')
+
+    with pytest.raises(ConflictingRequirementError):
+        venv.install_requirements(req_file1, req_file2)
 
 
 def test_uninstall_file(venv, temp_dir):
@@ -111,7 +156,7 @@ def test_uninstall_file(venv, temp_dir):
     req_file = temp_dir / 'requirements.txt'
     req_file.write_text('wheel\n')
 
-    venv.uninstall_file(req_file)
+    venv.uninstall_requirements(req_file)
     assert 'wheel' not in venv.installed()
 
 
@@ -119,7 +164,7 @@ def test_installed(venv):
     venv.install('wheel')
 
     packages = venv.installed()
-    assert isinstance(packages, list)
+    assert isinstance(packages, set)
     assert len(packages) > 0
     assert 'wheel' in packages
     assert all(isinstance(pkg, Package) for pkg in packages)
@@ -127,7 +172,7 @@ def test_installed(venv):
 
 def test_installed__empty(venv):
     packages = venv.installed()
-    assert isinstance(packages, list)
+    assert isinstance(packages, set)
     assert all(isinstance(pkg, Package) for pkg in packages)
 
 
