@@ -121,8 +121,32 @@ def test_install_file(venv, temp_dir):
     req_file = temp_dir / 'requirements.txt'
     req_file.write_text('wheel==0.43.0\n')
 
-    venv.install_file(req_file)
+    venv.install_requirements(req_file)
     assert 'wheel' in venv.installed()
+
+
+def test_install_requirements__multiple_files(temp_dir, venv):
+    req_file1 = temp_dir / 'requirements1.txt'
+    req_file1.write_text('tinydb==4.7.0\nclick==8.1.7')
+    req_file2 = temp_dir / 'requirements2.txt'
+    req_file2.write_text('flake8==6.1.0\nitsdangerous==2.1.2')
+
+    venv.install_requirements(req_file1, req_file2)
+    installed = venv.installed()
+    assert 'tinydb' in installed
+    assert 'click' in installed
+    assert 'flake8' in installed
+    assert 'itsdangerous' in installed
+
+
+def test_install_requirements__conflicting_versions(temp_dir, venv):
+    req_file1 = temp_dir / 'requirements1.txt'
+    req_file1.write_text('pytest==7.4.0')
+    req_file2 = temp_dir / 'requirements2.txt'
+    req_file2.write_text('pytest==6.2.0')
+
+    with pytest.raises(ConflictingRequirementError):
+        venv.install_requirements(req_file1, req_file2)
 
 
 def test_uninstall_file(venv, temp_dir):
@@ -132,7 +156,7 @@ def test_uninstall_file(venv, temp_dir):
     req_file = temp_dir / 'requirements.txt'
     req_file.write_text('wheel\n')
 
-    venv.uninstall_file(req_file)
+    venv.uninstall_requirements(req_file)
     assert 'wheel' not in venv.installed()
 
 

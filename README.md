@@ -52,7 +52,7 @@ venv = Venv.find_in('my_project')
 venv.install('requests', 'numpy==1.26.4')
 
 # Install from requirements file
-venv.install_file('requirements.txt')
+venv.install_requirements('requirements.txt')
 
 # Get installed packages
 packages = venv.installed()
@@ -182,7 +182,7 @@ venv.install(
 )
 
 # Install from requirements file
-venv.install_file('requirements.txt')
+venv.install_requirements('requirements.txt')
 
 # Check what's installed
 packages = venv.installed()

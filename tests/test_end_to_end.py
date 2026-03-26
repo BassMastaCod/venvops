@@ -54,13 +54,13 @@ def test_end_to_end(tmp_path):
     req = tmp_path / 'requirements.txt'
     req.write_text('wheel==0.43.0\n')
 
-    v.install_file(req)
+    v.install_requirements(req)
     assert 'wheel' in v.installed()
 
     # ------------------------------------------------------------
     # 8. uninstall from a requirements file
     # ------------------------------------------------------------
-    v.uninstall_file(req)
+    v.uninstall_requirements(req)
     assert 'wheel' not in v.installed()
 
     # ------------------------------------------------------------

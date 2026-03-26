@@ -63,9 +63,6 @@ class Package:
                 pass
         return cls(raw)
 
-    def is_compatible(self, other: 'Package') -> bool:
-        return self == other
-
     def __eq__(self, other):
         return getattr(other, 'name', str(other)) == self.name
 
@@ -270,13 +267,25 @@ class Venv:
         """Uninstalls the given packages from the venv."""
         return self.run_pip('uninstall', '-y', *packages)
 
-    def install_file(self, req_file: str|Path) -> str:
-        """Installs the packages in the specified requirements file to the venv."""
-        return self.install('-r', str(req_file))
+    def install_requirements(self, *req_files: str|Path) -> str:
+        """Installs the packages in the specified requirements files to the venv."""
+        args = []
+        for req in req_files:
+            req = Path(req)
+            if not req.exists():
+                raise FileNotFoundError(f'Requirements file not found: {req}')
+            args.extend(['-r', str(req)])
+        return self.install(*args)
 
-    def uninstall_file(self, req_file: str|Path) -> str:
-        """Uninstalls the packages in the specified requirements file from the venv."""
-        return self.uninstall('-r', str(req_file))
+    def uninstall_requirements(self, *req_files: str|Path) -> str:
+        """Uninstalls the packages in the specified requirements files from the venv."""
+        args = []
+        for req in req_files:
+            req = Path(req)
+            if not req.exists():
+                raise FileNotFoundError(f'Requirements file not found: {req}')
+            args.extend(['-r', str(req)])
+        return self.uninstall(*args)
 
     def installed(self) -> Packages:
         """Returns the current packages installed in the venv."""
