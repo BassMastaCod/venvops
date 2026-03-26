@@ -115,9 +115,7 @@ Package.register_subclasses(PinnedPackage, EditablePackage, UrlPackage)
 
 class Packages(set[Package]):
     def __contains__(self, item: str|Package) -> bool:
-        if isinstance(item, Package):
-            item = item.name
-        return any(pkg.name == item for pkg in self)
+        return any(pkg == item for pkg in self)
 
     def get(self, name: str) -> 'Packages':
         return Packages([pkg for pkg in self if pkg.name == name])
