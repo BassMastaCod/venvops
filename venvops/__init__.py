@@ -47,10 +47,10 @@ class Package:
         return self == other
 
     def __eq__(self, other):
-        return getattr(other, 'name', str(other)) == getattr(self, 'name', str(self))
+        return getattr(other, 'name', str(other)) == self.name
 
     def __hash__(self):
-        return hash(getattr(self, 'name', str(self)))
+        return hash(self.name)
 
     def __str__(self) -> str:
         return self.raw
