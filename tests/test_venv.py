@@ -1,8 +1,7 @@
-import subprocess
 from unittest.mock import patch
 import pytest
 
-from venvops import Venv, Package
+from venvops import *
 
 
 @pytest.fixture
@@ -62,7 +61,7 @@ def test_run_for_output():
 
 
 def test_run_for_output__failed():
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(CommandError):
         Venv.run_for_output('python', '-c', 'import sys; sys.exit(1)')
 
 

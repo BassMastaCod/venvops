@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Optional
 
 
+class CommandError(Exception):
+    """Base class for command execution errors."""
+
+
 class Package:
     """Represents a single package specification expressed in a standard requirement-line format.
 
@@ -184,17 +188,26 @@ class Venv:
         :param check: False to not raise an exception if the command returns a non-zero exit code
         :param kwargs: The keyword arguments to pass to the subprocess.run function
         :return: The output of the command as a string (includes both stdout and stderr)
-        :raises: CalledProcessError if the command fails (assuming check=True)
+        :raises: CommandError if the command fails (assuming check=True)
         """
-        return cls.run(
-            executable,
-            *args,
-            check=check,
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
-            text=True,
-            **kwargs
-        ).stdout
+        try:
+            return cls.run(
+                executable,
+                *args,
+                check=check,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                text=True,
+                **kwargs
+            ).stdout
+        except subprocess.CalledProcessError as e:
+            raise CommandError(
+                f'Command failed:\n'
+                f'  Executable: {executable}\n'
+                f'  Arguments: {" ".join(args)}\n'
+                f'  Exit code: {e.returncode}\n'
+                f'  Output:\n{e.stdout}'
+            ) from e
 
     def run_python(self, *args) -> str:
         """Runs a python command within the venv."""
