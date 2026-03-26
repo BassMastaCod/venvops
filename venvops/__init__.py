@@ -137,8 +137,11 @@ class Packages(set[Package]):
     def __contains__(self, item: str|Package) -> bool:
         return any(pkg == item for pkg in self)
 
-    def get(self, name: str) -> 'Packages':
-        return Packages([pkg for pkg in self if pkg.name == name])
+    def get(self, name: str) -> 'Package':
+        for pkg in self:
+            if pkg.name == name:
+                return pkg
+        raise KeyError(f'Package not found: {name}')
 
 
 class Venv:
