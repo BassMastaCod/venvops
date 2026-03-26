@@ -119,7 +119,7 @@ def test_installed(venv):
     venv.install('wheel')
 
     packages = venv.installed()
-    assert isinstance(packages, list)
+    assert isinstance(packages, set)
     assert len(packages) > 0
     assert 'wheel' in packages
     assert all(isinstance(pkg, Package) for pkg in packages)
@@ -127,7 +127,7 @@ def test_installed(venv):
 
 def test_installed__empty(venv):
     packages = venv.installed()
-    assert isinstance(packages, list)
+    assert isinstance(packages, set)
     assert all(isinstance(pkg, Package) for pkg in packages)
 
 

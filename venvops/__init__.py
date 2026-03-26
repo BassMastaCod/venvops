@@ -113,7 +113,7 @@ UrlPackage.register_subclasses(VcsPackage)
 Package.register_subclasses(PinnedPackage, EditablePackage, UrlPackage)
 
 
-class Packages(list[Package]):
+class Packages(set[Package]):
     def __contains__(self, item: str|Package) -> bool:
         if isinstance(item, Package):
             item = item.name
