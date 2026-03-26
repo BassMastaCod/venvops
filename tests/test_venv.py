@@ -87,6 +87,28 @@ def test_install(venv):
     assert 'wheel' in venv.installed()
 
 
+def test_install__specific_version(venv):
+    venv.install('wheel==0.38.4')
+    wheel = venv.installed().get('wheel')
+    assert isinstance(wheel, PinnedPackage)
+    assert wheel.version == '0.38.4'
+
+
+def test_install__invalid_package(venv):
+    with pytest.raises(InvalidPackageError):
+        venv.install('invalid-package')
+
+
+def test_install__invalid_version(venv):
+    with pytest.raises(InvalidVersionError):
+        venv.install('wheel==123.456.789')
+
+
+def test_install__malformed_requirement(venv):
+    with pytest.raises(MalformedRequirementError):
+        venv.install('wheel==')
+
+
 def test_uninstall(venv):
     venv.install('wheel')
     assert 'wheel' in venv.installed()

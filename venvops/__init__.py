@@ -10,6 +10,22 @@ class CommandError(Exception):
     """Base class for command execution errors."""
 
 
+class InvalidPackageError(CommandError):
+    """Raised when attempting to install an invalid package."""
+
+
+class InvalidVersionError(CommandError):
+    """Raised when attempting to install a package with an invalid version."""
+
+
+class MalformedRequirementError(CommandError):
+    """Raised when the requirement string is malformed."""
+
+
+class ConflictingRequirementError(CommandError):
+    """Raised when there are conflicting requirements during dependency resolution."""
+
+
 class Package:
     """Represents a single package specification expressed in a standard requirement-line format.
 
@@ -215,7 +231,33 @@ class Venv:
 
     def run_pip(self, *args) -> str:
         """Runs a pip command within the venv."""
-        return self.run_for_output(self.pip, *args)
+        try:
+            return self.run_for_output(self.pip, *args)
+        except CommandError as e:
+            if isinstance(e.__cause__, subprocess.CalledProcessError):
+                output = e.__cause__.stdout
+                if 'No matching distribution found' in output:
+                    if 'from versions: none' in output:
+                        raise InvalidPackageError(
+                            f'Invalid package specified:\n'
+                            f'{output}'
+                        ) from e
+                    else:
+                        raise InvalidVersionError(
+                            f'Invalid version specified:\n'
+                            f'{output}'
+                        ) from e
+                elif 'Invalid requirement' in output:
+                    raise MalformedRequirementError(
+                        f'Malformed requirement string:\n'
+                        f'{output}'
+                    ) from e
+                elif 'ResolutionImpossible' in output:
+                    raise ConflictingRequirementError(
+                        f'Conflicting requirements detected:\n'
+                        f'{output}'
+                    )
+            raise
 
     def install(self, *packages) -> str:
         """Installs the given packages to the venv."""
